@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+
+# preprocess: Clean and standardize BGG dataset
+# Usage: ./preprocess input.txt > output.tsv
+
+if [[ $# -ne 1 ]]; then
+    echo "Usage: $0 <input-file>" >&2
+    exit 1
+fi
+
+infile="$1"
+
+# 第一步：清理换行符、替换分隔符、删除非 ASCII
+tmp1=$(mktemp)
+tr -d '\r' < "$infile" \
+    | tr ';' '\t' \
+    | tr -cd '\0-\177\n' > "$tmp1"
+
+# 第二步：仅替换浮点字段（第 9 和 11 列）中的 , 为 .
+tmp2=$(mktemp)
+awk -F '\t' 'BEGIN { OFS = "\t" }
+NR == 1 { print; next }
+{
+    gsub(",", ".", $9)    # Rating Average
+    gsub(",", ".", $11)   # Complexity Average
+    print
+}' "$tmp1" > "$tmp2"
+
+# 第三步：为空 ID 创建新 ID（第一列）
+awk -F '\t' '
+BEGIN {
+    OFS = "\t"
+    max_id = 0
+}
+
+NR == 1 {
+    print
+    next
+}
+
+{
+    if ($1 ~ /^[0-9]+$/ && $1 > max_id) {
+        max_id = $1
+    }
+    lines[NR] = $0
+}
+
+END {
+    new_id = max_id + 1
+    for (i = 2; i <= NR; i++) {
+        split(lines[i], fields, "\t")
+        if (fields[1] == "") {
+            fields[1] = new_id++
+        }
+        line = fields[1]
+        for (j = 2; j <= length(fields); j++) {
+            line = line OFS fields[j]
+        }
+        print line
+    }
+}
+' "$tmp2"
+
+# 清理临时文件
+rm "$tmp1" "$tmp2"
