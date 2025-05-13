@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+# empty_cells: Count empty fields per column in semicolon-separated file
+# Usage: ./empty_cells bgg_dataset.txt
+
+if [[ $# -ne 1 ]]; then
+    echo "Usage: $0 <filename>" >&2
+    exit 1
+fi
+
+filename="$1"
+
+awk -F ";" '
+NR==1 {
+    for (i = 1; i <= NF; i++) {
+        # 清理掉列名中的 \r（Windows 换行）
+        gsub(/\r/, "", $i)
+        title[i] = $i
+        count[i] = 0
+    }
+    col_count = NF
+    next
+}
+{
+    for (i = 1; i <= col_count; i++) {
+        # 去除字段中的 \r
+        gsub(/\r/, "", $i)
+        if ($i == "") {
+            count[i]++
+        }
+    }
+}
+END {
+    for (i = 1; i <= col_count; i++) {
+        printf "%s: %d\n", title[i], count[i]
+    }
+}
+' "$filename"
