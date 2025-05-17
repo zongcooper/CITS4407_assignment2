@@ -72,3 +72,65 @@ END {
     printf("The most game domain is %s found in %d games\n", max_dom, max_dom_count)
 }
 ' "$file"
+
+echo  
+# I noticed a blank line in the sample assignment
+
+
+# compute Pearson corelation
+
+awk -F '\t' '
+NR == 1 { next }
+
+# Collection of eligible data points
+{
+    # Relevance 1: Year vs Rating
+    if ($3 ~ /^[0-9]+$/ && $9 ~ /^[0-9.]+$/) {
+        year = $3 + 0
+        rating = $9 + 0
+
+        sum_x1 += year
+        sum_y1 += rating
+        sum_x1_sq += year * year
+        sum_y1_sq += rating * rating
+        sum_xy1 += year * rating
+        n1++
+    }
+
+    # Relevance 2: Complexity vs Scoring
+    if ($11 ~ /^[0-9.]+$/ && $9 ~ /^[0-9.]+$/) {
+        complexity = $11 + 0
+        rating = $9 + 0
+
+        sum_x2 += complexity
+        sum_y2 += rating
+        sum_x2_sq += complexity * complexity
+        sum_y2_sq += rating * rating
+        sum_xy2 += complexity * rating
+        n2++
+    }
+}
+
+END {
+    # Pearson correlation: Year vs Rating
+    if (n1 > 0) {
+        numer1 = (n1 * sum_xy1) - (sum_x1 * sum_y1)
+        denom1 = sqrt((n1 * sum_x1_sq - sum_x1^2) * (n1 * sum_y1_sq - sum_y1^2))
+        r1 = (denom1 != 0) ? numer1 / denom1 : 0
+    } else {
+        r1 = 0
+    }
+
+    # Pearson correlation: Complexity vs Scoring
+    if (n2 > 0) {
+        numer2 = (n2 * sum_xy2) - (sum_x2 * sum_y2)
+        denom2 = sqrt((n2 * sum_x2_sq - sum_x2^2) * (n2 * sum_y2_sq - sum_y2^2))
+        r2 = (denom2 != 0) ? numer2 / denom2 : 0
+    } else {
+        r2 = 0
+    }
+
+    printf("The correlation between the year of publication and the average rating is %.3f\n", r1)
+    printf("The correlation between the complexity of a game and its average rating is %.3f\n", r2)
+}
+' "$file"
