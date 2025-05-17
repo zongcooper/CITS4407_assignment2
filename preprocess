@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-# preprocess: Clean and standardize BGG dataset
-# Usage: ./preprocess input.txt > output.tsv
+# preprocess: Clean and standardize dataset
 
 if [[ $# -ne 1 ]]; then
     echo "Usage: $0 <input-file>" >&2
@@ -10,13 +9,13 @@ fi
 
 infile="$1"
 
-# 第一步：清理换行符、替换分隔符、删除非 ASCII
+# Step 1: delete \r, replace ; with <TAB>, delete non-ASCII
 tmp1=$(mktemp)
 tr -d '\r' < "$infile" \
     | tr ';' '\t' \
     | tr -cd '\0-\177\n' > "$tmp1"
 
-# 第二步：仅替换浮点字段（第 9 和 11 列）中的 , 为 .
+# Step 2: I noticed that columns 9 and 11 have “,” so we're going to treat them separately as “.”
 tmp2=$(mktemp)
 awk -F '\t' 'BEGIN { OFS = "\t" }
 NR == 1 { print; next }
@@ -26,7 +25,7 @@ NR == 1 { print; next }
     print
 }' "$tmp1" > "$tmp2"
 
-# 第三步：为空 ID 创建新 ID（第一列）
+# Step 3: Create a new ID for an empty ID (first column)
 awk -F '\t' '
 BEGIN {
     OFS = "\t"
@@ -52,7 +51,7 @@ END {
         if (fields[1] == "") {
             fields[1] = new_id++
         }
-        line = fields[1]
+        line = fields[1]                          # Reassemble a line
         for (j = 2; j <= length(fields); j++) {
             line = line OFS fields[j]
         }
@@ -61,5 +60,4 @@ END {
 }
 ' "$tmp2"
 
-# 清理临时文件
 rm "$tmp1" "$tmp2"
