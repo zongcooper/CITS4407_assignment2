@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+
+# analysis: Perform data analysis on clean board game data
+
+if [[ $# -ne 1 ]]; then
+    echo "Usage: $0 <cleaned-input.tsv>" >&2
+    exit 1
+fi
+
+file="$1"
+
+# Based on the data processed, the clean table structure should be as follows（tab):
+# 1 - ID
+# 2 - Name
+# 3 - Year Published
+# 4 - Min Players
+# 5 - Max Players
+# 6 - Play Time
+# 7 - Min Age
+# 8 - Users Rated
+# 9 - Rating Average
+#10 - BGG Rank
+#11 - Complexity Average
+#12 - Owned Users
+#13 - Mechanics 
+#14 - Domains   
+
+# Analyze the most popular game mechanics and the most played domains:
+
+awk -F '\t' '
+BEGIN {
+    OFS = "\t"
+}
+NR == 1 { next }                                # Skip table header
+
+# Since columns 13,14 are comma separated, we have to split by comma
+{
+    n = split($13, mechs, ", ")
+    for (i = 1; i <= n; i++) {
+        gsub(/^[ \t]+|[ \t]+$/, "", mechs[i])       #Handling of extreme cases: removal of leading and trailing spaces
+        if (mechs[i] != "")
+            mech_count[mechs[i]]++
+    }
+
+    m = split($14, domains, ", ")
+    for (j = 1; j <= m; j++) {
+        gsub(/^[ \t]+|[ \t]+$/, "", domains[j])
+        if (domains[j] != "")
+            domain_count[domains[j]]++
+    }
+}
+END {
+    max_mech = ""
+    max_mech_count = 0
+    for (m in mech_count) {
+        if (mech_count[m] > max_mech_count) {
+            max_mech = m
+            max_mech_count = mech_count[m]
+        }
+    }
+
+    max_dom = ""
+    max_dom_count = 0
+    for (d in domain_count) {
+        if (domain_count[d] > max_dom_count) {
+            max_dom = d
+            max_dom_count = domain_count[d]
+        }
+    }
+
+    printf("The most popular game mechanics is %s found in %d games\n", max_mech, max_mech_count)
+    printf("The most game domain is %s found in %d games\n", max_dom, max_dom_count)
+}
+' "$file"
